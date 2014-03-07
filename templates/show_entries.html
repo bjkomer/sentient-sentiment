@@ -1,0 +1,37 @@
+{% extends "layout.html" %}
+{% block body %}
+    <form action="{{ url_for('add_entry') }}" method=post class=add-entry>
+      <dl>
+        <dt>Screen Name:
+        <dd><input type=text size=30 name=screen_name>
+        <dd><input type=submit value=Download>
+      </dl>
+    </form>
+  <ul class=entries>
+  {% for entry in entries %}
+    <li>
+      <h2>{{ entry.tweet }}</h2>
+      <p>{{ entry.label }}</p>
+      <table>
+	<tr>
+	  <td>Positive</td>
+	  <td>{{ entry.positive }}</td>
+	</tr>
+	<tr>
+	  <td>Negative</td>
+	  <td>{{ entry.negative }}</td>
+	</tr>
+	<tr>
+	  <td>Neutral</td>
+	  <td>{{ entry.neutral }}</td>
+	</tr>
+      </table>
+      <p>{{ entry.location }}</p>
+      <p>{{ entry.screen_name }}</p>
+      {{ entry.post_date|safe }}
+    </li>
+  {% else %}
+    <li><em>Unbelievable.  No entries here so far</em>
+  {% endfor %}
+  </ul>
+{% endblock %}
