@@ -7,6 +7,11 @@
         <dd><input type=submit value=Download>
       </dl>
     </form>
+    <form action="{{ url_for('fill_database') }}" method=post class=fill-database>
+      <dl>
+        <dd><input type=submit value=Fill>
+      </dl>
+    </form>
   <ul class=entries>
   {% for entry in entries %}
     <li>

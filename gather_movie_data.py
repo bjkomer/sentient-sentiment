@@ -24,6 +24,50 @@ app.config.update(dict(
 
 url = 'http://text-processing.com/api/sentiment/'
 
+def add_movie( movie_name ):
+  """
+  This function adds a particular movie to the database
+  """
+  db = get_db()
+  review_url = "http://www.metacritic.com/movie/" + movie_name + "/critic-reviews"
+  m_data = metacritic.get_reviews( review_url )
+  for critic in m_data['critics']:
+    critic_name = critic['critic']
+    quote = critic['quote']
+    score = critic['score']
+    sanitized_quote = re.sub('[^A-Za-z0-9 "`\'-.:;&]+', '', quote)
+    try:
+      r = requests.post( url, data= 'text=' + sanitized_quote )
+      label = r.json()['label']
+      positive = r.json()['probability']['pos']
+      negative = r.json()['probability']['neg']
+      neutral = r.json()['probability']['neutral']
+    except:
+      print "Error, skipping"
+      label = ""
+      positive = ""
+      negative = ""
+      neutral = ""
+
+    db.execute('insert or ignore into entries (movie, positive, negative, ' \
+               'neutral, label, critic, quote, score) values ' \
+               '(?, ?, ?, ?, ?, ?, ?, ?)',
+               [movie_name, positive, negative, neutral, label, critic_name, 
+                quote, score])
+  db.commit()
+
+@app.route('/fill', methods=['POST'])
+def fill_database():
+  """
+  This function fills the database with entries related to the movies
+  found in a text file.
+  """
+  with open("movie_list.txt", 'r') as f:
+    movies = f.readlines()
+    for m in movies:
+      add_movie( m.strip() )
+  return redirect(url_for('show_movie_entries'))
+
 def connect_db():
   rv = sqlite3.connect(app.config['DATABASE'])
   rv.row_factory = sqlite3.Row
@@ -53,39 +97,7 @@ def show_movie_entries():
 
 @app.route('/add', methods=['POST'])
 def add_entry():
-  db = get_db()
-  #statuses = api.GetUserTimeline(screen_name='CBCNews')
-  movie_name = request.form['movie']
-  review_url = "http://www.metacritic.com/movie/" + movie_name + "/critic-reviews"
-  m_data = metacritic.get_reviews( review_url )
-  for critic in m_data['critics']:
-    critic_name = critic['critic']
-    quote = critic['quote']
-    score = critic['score']
-    print( critic_name )
-    sanitized_quote = re.sub('[^A-Za-z0-9 "`\'-.:;&]+', '', quote)
-    #print( quote )
-    #print( sanitized_quote )
-    try:
-      r = requests.post( url, data= 'text=' + sanitized_quote )
-      label = r.json()['label']
-      positive = r.json()['probability']['pos']
-      negative = r.json()['probability']['neg']
-      neutral = r.json()['probability']['neutral']
-      print( label )
-    except:
-      print "Error, skipping"
-      label = ""
-      positive = ""
-      negative = ""
-      neutral = ""
-
-    db.execute('insert or ignore into entries (movie, positive, negative, ' \
-               'neutral, label, critic, quote, score) values ' \
-               '(?, ?, ?, ?, ?, ?, ?, ?)',
-               [movie_name, positive, negative, neutral, label, critic_name, 
-                quote, score])
-  db.commit()
+  add_movie( request.form['movie'] )
   return redirect(url_for('show_movie_entries'))
 
 app.config['DEBUG'] = True
