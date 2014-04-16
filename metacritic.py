@@ -79,11 +79,10 @@ def get_reviews(url):
         score = -1
     # NOTE: some reviews may not have authors
     #       one solution is to track by source instead
-    authors = [a.text
+    sources = [a.text
         for a in doc.xpath('//div[contains(@class, "critic_reviews")]'\
                            '//div[@class="review_content"]'\
                            '//div[@class="source"]//a|//span[@class="no_link"]')]
-                           #'//div[@class="author"]//a|//span[@class="no_link"]')]
     reviews = [d.text
         for d in doc.xpath('//div[contains(@class, "critic_reviews")]//div[@class="review_content"]//div[@class="review_body"]')]
     scores = [score_to_int(d.text.strip())
@@ -93,7 +92,7 @@ def get_reviews(url):
     for i in range(len(reviews)):
       if scores[i] != -1: # Don't include TBD scores
         metacritics.append({
-            'critic': authors[i],
+            'source': sources[i],
             'quote': strip_tags(reviews[i]).strip(),
             'score': scores[i],
         })

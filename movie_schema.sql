@@ -4,9 +4,8 @@ create table entries (
 	movie text not null,
 	positive float,
 	negative float,
-	neutral float,
 	label text,
-	critic text not null,
+	source text not null,
 	quote text unique not null,
 	score integer not null
 );

@@ -158,7 +158,8 @@ def generate_data():
                               'negative':item[2],
                               'neutral':item[3],
                               'label':item[4],
-                              'score':item[7]})
+                              'score':item[7],
+                              'quote':item[6]})
   movies.append( movie )
   # Generate by-source data
   c.execute('select movie, positive, negative, neutral, label, '\
@@ -180,7 +181,8 @@ def generate_data():
                               'negative':item[2],
                               'neutral':item[3],
                               'label':item[4],
-                              'score':item[7]})
+                              'score':item[7],
+                               'quote':item[6]})
   sources.append( source )
 
   with open( "movie_data.pkl", 'wb' ) as dump_file:
@@ -188,6 +190,7 @@ def generate_data():
 
 def main():
   #generate_data()
+  
   data = cPickle.load( open( "movie_data.pkl", 'rb' ) )
 
   movies = data['movies']
@@ -197,6 +200,6 @@ def main():
   print( average_by_source( sources ) )
   print( label_by_movie( movies ) )
   print( label_by_source( sources ) )
-
+  
 if __name__ == "__main__":
   main()
