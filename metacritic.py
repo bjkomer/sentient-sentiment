@@ -63,6 +63,12 @@ def get_data(url):
     }
 
 ## Added specifically for CS 886 Project
+def score_to_int( score ):
+  if score == 'tbd':
+    return -1
+  else:
+    return int( score )
+
 def get_reviews(url):
     data = read_url(url, unicode=True)
     doc = document_fromstring(data)
@@ -71,17 +77,21 @@ def get_reviews(url):
         score = int(score[0].text)
     else:
         score = -1
+    # NOTE: some reviews may not have authors
+    #       one solution is to track by source instead
     authors = [a.text
         for a in doc.xpath('//div[contains(@class, "critic_reviews")]'\
                            '//div[@class="review_content"]'\
-                           '//div[@class="author"]//a|//span[@class="no_link"]')]
+                           '//div[@class="source"]//a|//span[@class="no_link"]')]
+                           #'//div[@class="author"]//a|//span[@class="no_link"]')]
     reviews = [d.text
         for d in doc.xpath('//div[contains(@class, "critic_reviews")]//div[@class="review_content"]//div[@class="review_body"]')]
-    scores = [int(d.text.strip())
+    scores = [score_to_int(d.text.strip())
         for d in doc.xpath('//div[contains(@class, "critic_reviews")]//div[@class="review_content"]//div[contains(@class, "metascore_w")]')]
     
     metacritics = []
     for i in range(len(reviews)):
+      if scores[i] != -1: # Don't include TBD scores
         metacritics.append({
             'critic': authors[i],
             'quote': strip_tags(reviews[i]).strip(),
@@ -94,4 +104,26 @@ def get_reviews(url):
         'score': score,
         'url': url,
     }
+
+def get_movie_list():
+  """
+  Searches Metacritic and retrieves a list of the movies available
+  """
+  base_url = "http://www.metacritic.com/browse/movies/title/dvd/"
+  letters = "abcdefghijklmnopqrstuvwxyz"
+  movie_list = []
+  for letter in letters:
+    url = base_url + letter
+    data = read_url(url, unicode=True)
+    doc = document_fromstring(data)
+    movie_urls = [d.attrib['href']
+        for d in doc.xpath('//div[contains(@class, "main_col")]'\
+                           '//ol[contains(@class, "list_products")]'\
+                           '//div[contains(@class, "product_title")]'\
+                           '//a')]
+    for m in movie_urls:
+      movie_list.append( m.replace('/movie/', '')+'\n' )
+
+  with open( 'movie_list.txt', 'w' ) as f:
+    f.writelines( movie_list )
 

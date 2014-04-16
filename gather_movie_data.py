@@ -62,7 +62,7 @@ def fill_database():
   This function fills the database with entries related to the movies
   found in a text file.
   """
-  with open("movie_list.txt", 'r') as f:
+  with open("movie_list_o.txt", 'r') as f:
     movies = f.readlines()
     for m in movies:
       add_movie( m.strip() )
