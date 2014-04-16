@@ -135,12 +135,12 @@ def average_sentiment_score_value_by_movie( movies ):
   """
 
 def generate_data():
-  conn = sqlite3.connect('/tmp/test_movie.db')
+  conn = sqlite3.connect('/tmp/movie.db')
   c = conn.cursor()
   
   # Generate by-movie data
-  c.execute('select movie, positive, negative, neutral, label, '\
-            'critic, quote, score from entries order by movie desc')
+  c.execute('select movie, positive, negative, label, '\
+            'source, quote, score from entries order by movie desc')
   data = c.fetchall()
   movies = []
   name = ""
@@ -153,36 +153,36 @@ def generate_data():
       movie = {'name':item[0],
                'reviews':[]}
       name = item[0]
-    movie['reviews'].append( {'source':item[5],
+    movie['reviews'].append( {'source':item[4],
                               'positive':item[1],
                               'negative':item[2],
-                              'neutral':item[3],
-                              'label':item[4],
-                              'score':item[7],
-                              'quote':item[6]})
+                              #'neutral':item[3],
+                              'label':item[3],
+                              'score':item[6],
+                              'quote':item[5]})
   movies.append( movie )
   # Generate by-source data
-  c.execute('select movie, positive, negative, neutral, label, '\
-            'critic, quote, score from entries order by critic desc')
+  c.execute('select movie, positive, negative, label, '\
+            'source, quote, score from entries order by source desc')
   data = c.fetchall()
   sources = []
   name = ""
   for item in data:
     if str(item[1]) == "":
       continue
-    if item[5] != name:
+    if item[4] != name:
       if name != "":
         sources.append( source )
-      source = {'name':item[5],
+      source = {'name':item[4],
                'reviews':[]}
-      name = item[5]
+      name = item[4]
     source['reviews'].append( {'movie':item[0],
                               'positive':item[1],
                               'negative':item[2],
-                              'neutral':item[3],
-                              'label':item[4],
-                              'score':item[7],
-                               'quote':item[6]})
+                              #'neutral':item[3],
+                              'label':item[3],
+                              'score':item[6],
+                               'quote':item[5]})
   sources.append( source )
 
   with open( "movie_data.pkl", 'wb' ) as dump_file:
