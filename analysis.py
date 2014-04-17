@@ -74,8 +74,7 @@ def label_by_movie( movies ):
       pos = tot_neu/num_neu
 
     results[movie['name']] = {'Positve':pos,
-                              'Negative':neg,
-                              'Neutral':neu}
+                              'Negative':neg}
 
   return results
 
@@ -114,25 +113,53 @@ def label_by_source( sources ):
       pos = tot_neu/num_neu
 
     results[source['name']] = {'Positve':pos,
-                              'Negative':neg,
-                              'Neutral':neu}
+                              'Negative':neg}
 
   return results
 
-def average_sentiment_score_value():
+def average_sentiment_score_value( movies ):
   """
   Average amount of 'sentiment' each score point represents
   """
+  by_movie = average_sentiment_score_value_by_movie( movies )
+  total = 0
+  num = len( by_movie )
+  for score in by_movie.values():
+    total += score
+
+  return total / num
 
 def average_sentiment_score_value_by_source( sources ):
   """
   Average amount of 'sentiment' each score point represents for each source
   """
+  results = {}
+  for source in sources:
+    score_total = 0
+    pos_total = 0
+    for review in movie['reviews']:
+      pos_total += review['positive']
+      score_total += review['score']
+
+    results[source['name']] = pos_total / score_total
+
+  return results
 
 def average_sentiment_score_value_by_movie( movies ):
   """
   Average amount of 'sentiment' each score point represents for each movie
   """
+  results = {}
+  for movie in movies:
+    score_total = 0
+    pos_total = 0
+    for review in movie['reviews']:
+      pos_total += review['positive']
+      score_total += review['score']
+
+    results[movie['name']] = pos_total / score_total
+
+  return results
 
 def generate_data():
   conn = sqlite3.connect('/tmp/movie.db')
@@ -190,16 +217,18 @@ def generate_data():
 
 def main():
   #generate_data()
-  
+  #"""
   data = cPickle.load( open( "movie_data.pkl", 'rb' ) )
 
   movies = data['movies']
   sources = data['sources']
-  
+
   print( average_by_movie( movies ) )
   print( average_by_source( sources ) )
   print( label_by_movie( movies ) )
   print( label_by_source( sources ) )
-  
+
+  print( average_sentiment_score_value( movies ) )
+  #"""
 if __name__ == "__main__":
   main()
