@@ -120,6 +120,25 @@ def show_movie_entries():
   cur = db.execute('select movie, positive, negative, label, '\
                    'source, quote, score, id from entries order by id desc')
   entries = cur.fetchall()
+  #return render_template('show_movie_entries.html', entries=entries)
+  return render_template('show_movie_entries.html', entries=entries[:20])
+
+@app.route('/')
+def show_entries_by_movie( movie ):
+  db = get_db()
+  cur = db.execute('select movie, positive, negative, label, '\
+                   'source, quote, score, id from entries where movie=?'\
+                   'order by id desc', movie)
+  entries = cur.fetchall()
+  return render_template('show_movie_entries.html', entries=entries)
+
+@app.route('/')
+def show_entries_by_source( source ):
+  db = get_db()
+  cur = db.execute('select movie, positive, negative, label, '\
+                   'source, quote, score, id from entries where source=?'\
+                   'order by id desc', source)
+  entries = cur.fetchall()
   return render_template('show_movie_entries.html', entries=entries)
 
 @app.route('/add', methods=['POST'])
