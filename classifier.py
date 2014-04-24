@@ -5,16 +5,17 @@ from nltk.util import ngrams
 
 class SentimentClassifier():
 
-  def __init__( self ):
+  def __init__( self, clf_type='nb_twogram' ):
     self.nb_onegram = None
-    self.nb_twogram = nltk.data.load("classifiers/movie_reviews_NaiveBayes_2gram.pickle")
+    self.nb_twogram = None
     self.nb_threegram = None
     self.nb_fourgram = None
-    self.dt_twogram = None
+    self.nb_fivegram = None
     self.dt_onegram = None
+    self.dt_twogram = None
+    self.dt_threegram = None
 
-    self.classifier = self.nb_twogram
-    self.ngrams = 2
+    self.set_classifier( clf_type )
 
   def classify( self, quote ):
     tokens = nltk.word_tokenize(quote)
@@ -28,6 +29,9 @@ class SentimentClassifier():
     elif self.ngrams == 4:
       feats = dict([(token, True) for token in tokens + ngrams(tokens, 2) +
                     ngrams(tokens, 3) + ngrams(tokens, 4)])
+    elif self.ngrams == 5:
+      feats = dict([(token, True) for token in tokens + ngrams(tokens, 2) +
+                    ngrams(tokens, 3) + ngrams(tokens, 4) + ngrams(tokens, 5)])
     prob = self.classifier.prob_classify( feats )
     label = 'pos'
     if prob.prob('neg') > .5:
@@ -38,8 +42,17 @@ class SentimentClassifier():
     tokens = nltk.word_tokenize(quote)
     if self.ngrams == 1:
       feats = dict([(token, True) for token in tokens])
-    elif self.ngrams ==2:
+    elif self.ngrams == 2:
       feats = dict([(token, True) for token in tokens + ngrams(tokens, 2)])
+    elif self.ngrams == 3:
+      feats = dict([(token, True) for token in tokens + ngrams(tokens, 2) +
+                    ngrams(tokens, 3)])
+    elif self.ngrams == 4:
+      feats = dict([(token, True) for token in tokens + ngrams(tokens, 2) +
+                    ngrams(tokens, 3) + ngrams(tokens, 4)])
+    elif self.ngrams == 5:
+      feats = dict([(token, True) for token in tokens + ngrams(tokens, 2) +
+                    ngrams(tokens, 3) + ngrams(tokens, 4) + ngrams(tokens, 5)])
     return self.classifier.classify( feats )
 
   def set_classifier( self, name ):
@@ -63,6 +76,11 @@ class SentimentClassifier():
         self.nb_fourgram = nltk.data.load("classifiers/movie_reviews_NaiveBayes_4gram.pickle")
       self.classifier = self.nb_fourgram
       self.ngrams = 4
+    elif name == 'nb_fivegram':
+      if self.nb_fivegram is None:
+        self.nb_fivegram = nltk.data.load("classifiers/movie_reviews_NaiveBayes_5gram.pickle")
+      self.classifier = self.nb_fivegram
+      self.ngrams = 5
     elif name == 'dt_onegram':
       if self.dt_onegram is None:
         self.dt_onegram = nltk.data.load("classifiers/movie_reviews_DecisionTree_1gram.pickle")
@@ -73,6 +91,11 @@ class SentimentClassifier():
         self.dt_twogram = nltk.data.load("classifiers/movie_reviews_DecisionTree_2gram.pickle")
       self.classifier = self.dt_twogram
       self.ngrams = 2
+    elif name == 'dt_threegram':
+      if self.dt_threegram is None:
+        self.dt_threegram = nltk.data.load("classifiers/movie_reviews_DecisionTree_3gram.pickle")
+      self.classifier = self.dt_threegram
+      self.ngrams = 3
 
 class EPAClassifier():
 
