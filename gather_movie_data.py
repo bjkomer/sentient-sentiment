@@ -213,21 +213,21 @@ def show_entries_by_movie():
 
   if 'movie' in request.form.keys():
     movie = request.form['movie']
-    cur_movie = movie
+    cur_movie = str(movie)
     cur_source = ""
   elif 'source' in request.form.keys():
     source = request.form['source']
-    cur_source = source
+    cur_source = str(source)
     cur_movie = ""
   elif 'clf' in request.form.keys():
     cur_clf = request.form['clf']
 
   if cur_movie != "":
     sel = 'movie'
-    val = str(cur_movie)
+    val = cur_movie
   elif cur_source != "":
     sel = 'source'
-    val = str(cur_source)
+    val = cur_source
 
   if cur_clf == "Naive Bayes 1-gram":
     lbl = 'label_nbo'

@@ -18,7 +18,7 @@
 	<dd>
 	<select name=movie>
 	{% for movie in movies %}
-	  <option value="{{movie.movie}}">{{movie.movie}}</option>
+	<option value="{{movie.movie}}"{% if movie.movie == cur_movie %}selected{% endif %}>{{movie.movie}}</option>
 	{% endfor %}
 	</select>
         <dd><input type=submit value="Display Movie">
@@ -30,7 +30,7 @@
         <dd>
 	<select name=source>
 	{% for source in sources %}
-	  <option value="{{source.source}}">{{source.source}}</option>
+	<option value="{{source.source}}"{% if source.source == cur_source %}selected{% endif %}>{{source.source}}</option>
 	{% endfor %}
 	</select>
         <dd><input type=submit value="Display Source">
@@ -42,7 +42,7 @@
         <dd>
 	<select name=clf>
 	{% for clf in clfs %}
-	  <option value="{{clf}}">{{clf}}</option>
+	<option value="{{clf}}" {% if clf == cur_clf %}selected{% endif %}>{{clf}}</option>
 	{% endfor %}
 	</select>
         <dd><input type=submit value="Change Classifier">
