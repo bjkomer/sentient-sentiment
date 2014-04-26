@@ -5,57 +5,96 @@ from nltk.util import ngrams
 
 class SentimentClassifier():
 
-  def __init__( self, clf_type='nb_twogram' ):
-    self.nb_onegram = None
-    self.nb_twogram = None
-    self.nb_threegram = None
-    self.nb_fourgram = None
-    self.nb_fivegram = None
-    self.dt_onegram = None
-    self.dt_twogram = None
-    self.dt_threegram = None
+  def __init__( self, clf_type='nb12' ):
+
+    # {Name:[Classifier, Prob_Classify?, NGrams]}
+    self.clf = {"nb1":[None,True,[1]], "nb2":[None,True,[2]], "nb3":[None,True,[3]],
+                 "nb4":[None,True,[4]], "nb5":[None,True,[5]],
+                 "nb12":[None,True,[1,2]], "nb123":[None,True,[1,2,3]],
+                 "nb1234":[None,True,[1,2,3,4]],
+                 "dt1":[None,False,[1]], "dt2":[None,False,[2]],
+                 "dt3":[None,False,[3]],
+                 "dt4":[None,False,[4]], "dt12":[None,False,[1,2]],
+                 "knn1":[None,True,[1]], "knn12":[None,True,[1,2]],
+                 "svc12":[None,False,[1,2]],
+                 "gbc12":[None,True,[1,2]]}
 
     self.set_classifier( clf_type )
 
+  def generate_features( self, quote ):
+    tokens = nltk.word_tokenize(quote)
+    full_tokens = []
+    for n in self.ngrams:
+      if n == 1:
+        full_tokens += tokens
+      else:
+        full_tokens += ngrams( tokens, n )
+
+    return dict([(token, True) for token in full_tokens])
+
   def classify( self, quote ):
-    tokens = nltk.word_tokenize(quote)
-    if self.ngrams == 1:
-      feats = dict([(token, True) for token in tokens])
-    elif self.ngrams == 2:
-      feats = dict([(token, True) for token in tokens + ngrams(tokens, 2)])
-    elif self.ngrams == 3:
-      feats = dict([(token, True) for token in tokens + ngrams(tokens, 2) +
-                    ngrams(tokens, 3)])
-    elif self.ngrams == 4:
-      feats = dict([(token, True) for token in tokens + ngrams(tokens, 2) +
-                    ngrams(tokens, 3) + ngrams(tokens, 4)])
-    elif self.ngrams == 5:
-      feats = dict([(token, True) for token in tokens + ngrams(tokens, 2) +
-                    ngrams(tokens, 3) + ngrams(tokens, 4) + ngrams(tokens, 5)])
-    prob = self.classifier.prob_classify( feats )
-    label = 'pos'
-    if prob.prob('neg') > .5:
-      label = 'neg'
-    return {'pos':prob.prob('pos'),'neg':prob.prob('neg'),'label':label}
+    
+    feats = self.generate_features( quote )
+    if self.prob:
+      prob = self.clf[ self.cur_clf ][0].prob_classify( feats )
+      label = 'pos'
+      if prob.prob('neg') > .5:
+        label = 'neg'
+      return {'pos':prob.prob('pos'),'neg':prob.prob('neg'),'label':label}
+    else:
+      label =  self.clf[ self.cur_clf ][0].classify( feats )
+      p_pos = 1 if label == 'pos' else 0
+      p_neg = 1 if label != 'pos' else 0
+
+      return {'pos':p_pos,'neg':p_neg,'label':label}
   
-  def simple_classify( self, quote ):
-    tokens = nltk.word_tokenize(quote)
-    if self.ngrams == 1:
-      feats = dict([(token, True) for token in tokens])
-    elif self.ngrams == 2:
-      feats = dict([(token, True) for token in tokens + ngrams(tokens, 2)])
-    elif self.ngrams == 3:
-      feats = dict([(token, True) for token in tokens + ngrams(tokens, 2) +
-                    ngrams(tokens, 3)])
-    elif self.ngrams == 4:
-      feats = dict([(token, True) for token in tokens + ngrams(tokens, 2) +
-                    ngrams(tokens, 3) + ngrams(tokens, 4)])
-    elif self.ngrams == 5:
-      feats = dict([(token, True) for token in tokens + ngrams(tokens, 2) +
-                    ngrams(tokens, 3) + ngrams(tokens, 4) + ngrams(tokens, 5)])
-    return self.classifier.classify( feats )
+  def clf_string( self, name ):
+
+    if name == "nb1":
+      return "classifiers/movie_reviews_NaiveBayes_1gram.pickle"
+    elif name == "nb2":
+      return "classifiers/movie_reviews_NaiveBayes_2gram.pickle"
+    elif name == "nb3":
+      return "classifiers/movie_reviews_NaiveBayes_3gram.pickle"
+    elif name == "nb4":
+      return "classifiers/movie_reviews_NaiveBayes_4gram.pickle"
+    elif name == "nb5":
+      return "classifiers/movie_reviews_NaiveBayes_5gram.pickle"
+    elif name == "nb12":
+      return "classifiers/movie_reviews_NaiveBayes_1-2gram.pickle"
+    elif name == "nb123":
+      return "classifiers/movie_reviews_NaiveBayes_1-2-3gram.pickle"
+    elif name == "nb1234":
+      return "classifiers/movie_reviews_NaiveBayes_1-2-3-4gram.pickle"
+    elif name == "dt1":
+      return "classifiers/movie_reviews_DecisionTree_1gram.pickle"
+    elif name == "dt2":
+      return "classifiers/movie_reviews_DecisionTree_2gram.pickle"
+    elif name == "dt3":
+      return "classifiers/movie_reviews_DecisionTree_3gram.pickle"
+    elif name == "dt4":
+      return "classifiers/movie_reviews_DecisionTree_4gram.pickle"
+    elif name == "dt12":
+      return "classifiers/movie_reviews_DecisionTree_1-2gram.pickle"
+    elif name == "svc12":
+      return "classifiers/movie_reviews_SVC_1-2gram.pickle"
+    elif name == "knn1":
+      return "classifiers/movie_reviews_KNN_1gram.pickle"
+    elif name == "knn12":
+      return "classifiers/movie_reviews_KNN_1-2gram.pickle"
+    elif name == "gbc12":
+      return "classifiers/movie_reviews_GradientBoostingClassifier_1-2gram.pickle"
+    else:
+      print( "Unknown Classifier chosen, defaulting to Naive Bayes" )
+      return "classifiers/movie_reviews_NaiveBayes_1-2gram.pickle"
 
   def set_classifier( self, name ):
+    if self.clf[name][0] is None:
+      self.clf[name][0] = nltk.data.load( self.clf_string( name ) )
+      self.ngrams = self.clf[name][2]
+      self.prob = self.clf[name][1]
+      self.cur_clf = name
+    """
     if name == 'nb_onegram':
       if self.nb_onegram is None:
         self.nb_onegram = nltk.data.load("classifiers/movie_reviews_NaiveBayes_1gram.pickle")
@@ -96,7 +135,7 @@ class SentimentClassifier():
         self.dt_threegram = nltk.data.load("classifiers/movie_reviews_DecisionTree_3gram.pickle")
       self.classifier = self.dt_threegram
       self.ngrams = 3
-
+    """
 class EPAClassifier():
 
   def __init__():

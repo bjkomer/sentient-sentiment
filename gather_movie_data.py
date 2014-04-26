@@ -27,23 +27,34 @@ url = 'http://text-processing.com/api/sentiment/'
 #clf = classifier.SentimentClassifier()
 cur_source = ""
 cur_movie = ""
-cur_clf = "Naive Bayes 2-gram"
+cur_clf = "Naive Bayes 1-2-gram"
 
 clfs = ["Naive Bayes 1-gram", "Naive Bayes 2-gram",
         "Naive Bayes 3-gram", "Naive Bayes 4-gram",
-        "Naive Bayes 5-gram", "Decision Tree 1-gram",
-        "Decision Tree 2-gram", "Decision Tree 3-gram"]
+        "Naive Bayes 5-gram",
+        "Naive Bayes 1-2-gram", "Naive Bayes 1-2-3-gram",
+        "Naive Bayes 1-2-3-4-gram", 
+        "Decision Tree 1-gram", "Decision Tree 2-gram", 
+        "Decision Tree 3-gram", "Decision Tree 4-gram", 
+        "Decision Tree 1-2-gram",
+        "KNN 1-gram", "KNN 1-2-gram", 
+        "SCV 1-2-gram",
+        "GBC 1-2-gram"]
 
-LOADING_DATASET = False
+#clf_t = ["nb1", "nb2", "nb3", "nb4", "nb5", "nb12", "nb123", "nb1234",
+#         "dt1", "dt2", "dt3", "dt4", "dt12",
+#         "knn1", "knn12",
+#         "svc12",
+#         "gbc12"]
+clf_t = ["knn1",
+         "svc12",
+         "gbc12"]
+
+LOADING_DATASET = True
 if LOADING_DATASET:
-  clf_nbo = classifier.SentimentClassifier('nb_onegram')
-  clf_nbt = classifier.SentimentClassifier('nb_twogram')
-  clf_nbth = classifier.SentimentClassifier('nb_threegram')
-  clf_nbf = classifier.SentimentClassifier('nb_fourgram')
-  clf_nbfi = classifier.SentimentClassifier('nb_fivegram')
-  clf_dto = classifier.SentimentClassifier('dt_onegram')
-  clf_dtt = classifier.SentimentClassifier('dt_twogram')
-  clf_dtth = classifier.SentimentClassifier('dt_threegram')
+  clf = []
+  for tag in clf_t:
+    clf.append( classifier.SentimentClassifier( tag ) )
 
 def add_movie_online( movie_name ):
   """
@@ -82,6 +93,7 @@ def add_movie( movie_name ):
   """
   This function adds a particular movie to the database
   """
+  global clf
   db = get_db()
   review_url = "http://www.metacritic.com/movie/" + movie_name + "/critic-reviews"
   m_data = metacritic.get_reviews( review_url )
@@ -91,11 +103,16 @@ def add_movie( movie_name ):
     score = critic['score']
     sanitized_quote = re.sub('[^A-Za-z0-9 "`\'-.:;&]+', '', quote)
     
-    res = clf_nbo.classify( sanitized_quote )
-    positive_nbo = res['pos']
-    negative_nbo = res['neg']
-    label_nbo = res['label']
-    
+    positive = []
+    negative = []
+    label = []
+    for i in range( len( clf_t ) ):
+
+      res = clf[i].classify( sanitized_quote )
+      positive.append( res['pos'] )
+      negative.append( res['neg'] )
+      label.append( res['label'] )
+    """
     res = clf_nbt.classify( sanitized_quote )
     positive_nbt = res['pos']
     negative_nbt = res['neg']
@@ -121,23 +138,50 @@ def add_movie( movie_name ):
     label_dtt = clf_dtt.simple_classify( sanitized_quote )
     
     label_dtth = clf_dtth.simple_classify( sanitized_quote )
-    
+    """
     db.execute('insert or ignore into entries (movie, source, quote, score,'\
-               'positive_nbo, negative_nbo, label_nbo,' \
-               'positive_nbt, negative_nbt, label_nbt,' \
-               'positive_nbth, negative_nbth, label_nbth,' \
-               'positive_nbf, negative_nbf, label_nbf,' \
-               'positive_nbfi, negative_nbfi, label_nbfi,' \
-               'label_dto, label_dtt, label_dtth) values ' \
-               '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,'\
-               ' ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+               'positive_nb1, negative_nb1, label_nb1,' \
+               'positive_nb2, negative_nb2, label_nb2,' \
+               'positive_nb3, negative_nb3, label_nb3,' \
+               'positive_nb4, negative_nb4, label_nb4,' \
+               'positive_nb5, negative_nb5, label_nb5,' \
+               'positive_nb12, negative_nb12, label_nb12,' \
+               'positive_nb123, negative_nb123, label_nb123,' \
+               'positive_nb1234, negative_nb1234, label_nb1234,' \
+               'positive_dt1, negative_dt1, label_dt1,' \
+               'positive_dt2, negative_dt2, label_dt2,' \
+               'positive_dt3, negative_dt3, label_dt3,' \
+               'positive_dt4, negative_dt4, label_dt4,' \
+               'positive_dt12, negative_dt12, label_dt12,' \
+               'positive_knn1, negative_knn1, label_knn1,' \
+               'positive_knn12, negative_knn12, label_knn12,' \
+               'positive_svc12, negative_svc12, label_gbc12,' \
+               'positive_gbc12, negative_gbc12, label_svc12,' \
+               ') values ' \
+               '(?, ?, ?, ?,'\
+               ' ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?'\
+               ' ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?'\
+               ' ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?'\
+               ' ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?'\
+               ' ?, ?, ?)',
                [movie_name, source_name, quote, score,
-                positive_nbo, negative_nbo, label_nbo, 
-               positive_nbt, negative_nbt, label_nbt,
-               positive_nbth, negative_nbth, label_nbth,
-               positive_nbf, negative_nbf, label_nbf,
-               positive_nbfi, negative_nbfi, label_nbfi,
-               label_dto, label_dtt, label_dtth])
+                positive[0], negative[0], label[0],
+                positive[1], negative[1], label[1],
+                positive[2], negative[2], label[2],
+                positive[3], negative[3], label[3],
+                positive[4], negative[4], label[4],
+                positive[5], negative[5], label[5],
+                positive[6], negative[6], label[6],
+                positive[7], negative[7], label[7],
+                positive[8], negative[8], label[8],
+                positive[9], negative[9], label[9],
+                positive[10], negative[10], label[10],
+                positive[11], negative[11], label[11],
+                positive[12], negative[12], label[12],
+                positive[13], negative[13], label[13],
+                positive[14], negative[14], label[14],
+                positive[15], negative[15], label[15],
+                positive[16], negative[16], label[16] ])
   db.commit()
 
 @app.route('/fill', methods=['POST'])
