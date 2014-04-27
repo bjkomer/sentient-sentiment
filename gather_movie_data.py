@@ -258,6 +258,66 @@ def show_entries_by_movie():
                          cur_movie=cur_movie, cur_source=cur_source,
                          cur_clf=cur_clf, avg_err=avg_err)
 
+def compare_sources():
+  
+  sources = ["The New York Times", "Time", 
+             "Rolling Stone", "TV Guide", "TNT RoughCut"]
+  #sources = ["The New York Times", "Time", 
+  #           "Rolling Stone", "TV Guide"]
+  #sources = ["The New York Times", 
+  #           "Rolling Stone", "TV Guide"]
+
+  
+  with open('results.csv', 'wb') as csvfile:
+    writer = csv.writer( csvfile, delimiter=',')
+    
+    db = get_db()
+    m = []
+    for source in sources:  
+      cur = db.execute('select distinct movie from entries where source ='\
+                       '? order by movie desc', (source,))
+      entries = cur.fetchall()
+      m.append( [x[0] for x in entries] )
+    
+    movies_in_all = []
+    for i in m[0]:
+      found = False
+      for j in m[1:]:
+        cur_found = False
+        for k in j:
+          if i == k:
+            cur_found = True
+            break
+        if cur_found == False:
+          found = False
+          break
+        else:
+          found = True
+      if found:
+        movies_in_all.append( i )
+        found = False
+
+    print( movies_in_all )
+    print( len( movies_in_all ) )
+
+    for source in sources:
+      print( [source]+movies_in_all )
+      #cur = db.execute('select movie, score, label_nb12, positive_nb12 from entries where source ='\
+      #                 '(?) and movie in (? ? ? ? ? ? ? ? ? ? ? ?) order by movie desc',
+      #                 [source]+movies_in_all)
+      cur = db.execute('select movie, score, label_nb12, positive_nb12 from entries where source ='\
+                       '"%s" and movie in (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) order by '\
+                       'movie desc'%source,
+                       movies_in_all)
+      entries = cur.fetchall()
+      writer.writerow( ["Source:", source ] )
+      writer.writerow( ["Movie", "Score", "Label", "Positive" ] )
+      for entry in entries:
+        writer.writerow( [entry[0], entry[1], entry[2], entry[3]] )
+    
+
+
+
 @app.route('/data', methods=['POST'])
 def generate_data():
   """
@@ -275,6 +335,10 @@ def generate_data():
   -Reports error for the top 10 highest scoring movies
   -Reports error for the top 10 lowest scoring movies
   """
+
+  compare_sources()
+  return redirect(url_for('show_movie_entries'))
+
   with open('results.csv', 'wb') as csvfile:
     writer = csv.writer( csvfile, delimiter=',')
     
@@ -294,7 +358,6 @@ def generate_data():
     total_score = 0.0
     num_entries = len( entries )
     l_thresh_list = [5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95]
-    #e_thresh_list = [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40]
     e_thresh_list = [x*5 for x in range(20)]
 
     for c in range( len( clf_t ) ):
