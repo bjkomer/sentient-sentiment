@@ -4,6 +4,7 @@ import metacritic
 import classifier
 import re
 import csv
+import math
 
 import sqlite3
 import os
@@ -28,6 +29,10 @@ url = 'http://text-processing.com/api/sentiment/'
 cur_source = ""
 cur_movie = ""
 cur_clf = "Naive Bayes 1-2-gram"
+
+ERR_THRESH = 100 # Error threshold
+LABEL_THRESH = 50 # Scores above this are considered positive
+LABEL_THRESH2 = 70 # Scores above this are considered positive
 
 clfs = ["Naive Bayes 1-gram", "Naive Bayes 2-gram",
         "Naive Bayes 1-2-gram",
@@ -192,11 +197,13 @@ def compute_stats( entries ):
   for entry in entries:
     total_score += entry[6]
     total_pos += entry[2]
-    total_err += sqr( entry[2] - entry[6]/100 )
+    diff = ( entry[2]*100 - entry[6] ) ** 2
+    if diff > ERR_THRESH:
+      total_err += ( diff - ERR_THRESH )
   avg_score = total_score / num
   avg_pos = total_pos / num
   pos_per_score = total_pos / total_score
-  avg_err = total_err / num
+  avg_err = math.sqrt( total_err / num )
   return ( avg_score, avg_pos, pos_per_score, avg_err )
 
 @app.route('/', methods=['POST'])
@@ -232,9 +239,9 @@ def show_entries_by_movie():
   neg = "negative_" + clf_t[ index ]
 
   db = get_db()
-  cur = db.execute('select %s, %s, %s, %s, '\
-                   'source, quote, score, id from entries where %s=(?)'\
-                   'order by id desc' % (sel, lbl, pos, neg, sel), (val,))
+  cur = db.execute('select %s, %s, %s, '\
+                   'source, movie, quote, score, id from entries where %s=(?)'\
+                   'order by id desc' % (lbl, pos, neg, sel), (val,))
   entries = cur.fetchall()
   
   cur = db.execute('select distinct movie '\
@@ -255,10 +262,101 @@ def show_entries_by_movie():
 def generate_data():
   """
   This function organizes the data into a spreadsheet in various ways
+  
+  For each classifier it computes:
+  -Computes average squared error
+  -Percent correct
+  -Reports the 10 movies with the most error
+  -Reports the 10 movies with the least error
+  -Reports the 10 sources with the most error
+  -Reports the 10 sources with the least error
+  -Reports sentiment rating for the top 10 highest scoring movies
+  -Reports sentiment rating for the top 10 lowest scoring movies
+  -Reports error for the top 10 highest scoring movies
+  -Reports error for the top 10 lowest scoring movies
   """
   with open('results.csv', 'wb') as csvfile:
     writer = csv.writer( csvfile, delimiter=',')
-    writer.writerow([dkey]+[akey]+[ckey]+[ekey]+e)
+    
+    db = get_db()
+    
+    cur = db.execute('select * from entries')
+    
+    entries = cur.fetchall()
+    
+    total_pos = []
+    total_err = []
+    total_lbl = [] # counts positive labels
+    total_t_err = []
+    total_acc = []
+    total_acc2 = []
+    total_score = 0.0
+    num_entries = len( entries )
+
+    for c in range( len( clf_t ) ):
+      total_pos.append(0.0)
+      total_err.append(0.0)
+      total_lbl.append(0.0)
+      total_acc.append(0.0)
+      total_acc2.append(0.0)
+      total_t_err.append(0.0)
+
+    # Loop through each data point
+    for entry in entries:
+      # Loop through each classifier
+      score = entry[4]
+      total_score += score
+      movie = entry[1]
+      source = entry[2]
+      for c in range( len( clf_t ) ):
+        pos = entry[3*c+5]
+        neg = entry[3*c+6]
+        lbl = str(entry[3*c+7])
+        err = (score - pos*100) ** 2
+        if lbl == 'pos' and score > LABEL_THRESH:
+          acc = 1.0
+          if score > LABEL_THRESH2:
+            acc2 = 1.0
+          else:
+            acc2 = 0.0
+        elif lbl == 'neg' and score < LABEL_THRESH2:
+          acc2 = 1.0
+          if score < LABEL_THRESH2:
+            acc = 1.0
+          else:
+            acc = 0.0
+        else:
+          acc = 0.0
+          acc2 = 0.0
+
+        if err < ERR_THRESH:
+          t_err = 0.0
+        else:
+          t_err = err
+
+        total_pos[ c ] += pos
+        total_err[ c ] += err
+        total_lbl[ c ] += 1.0 if lbl == 'pos' else 0.0
+        total_acc[ c ] += acc
+        total_acc2[ c ] += acc2
+        total_t_err[ c ] += t_err
+
+    writer.writerow(["Average Score:", total_score/num_entries,
+                     "Number of Reviews:", num_entries])
+    writer.writerow(["Classifier", "Average Positive Sentiment", 
+                     "Accuracy with 50 Threshold",
+                     "Accuracy with 70 Threshold",
+                     "Average Error","Average Error with Threshold",
+                     "Percentage of Positive Labels"])
+    for c in range( len( clf_t ) ):
+      pos = total_pos[ c ] / num_entries
+      lbl = total_lbl[ c ] / num_entries
+      acc = total_acc[ c ] / num_entries
+      acc2 = total_acc2[ c ] / num_entries
+      err = math.sqrt( total_err[ c ] / num_entries )
+      t_err = math.sqrt( total_t_err[ c ] / num_entries )
+
+      writer.writerow([clf_t[c], pos, acc, acc2, err, t_err, lbl])
   
   return redirect(url_for('show_movie_entries'))
 
