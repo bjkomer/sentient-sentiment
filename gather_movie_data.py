@@ -288,18 +288,31 @@ def generate_data():
     total_err = []
     total_lbl = [] # counts positive labels
     total_t_err = []
+    total_t_err2 = []
     total_acc = []
     total_acc2 = []
     total_score = 0.0
     num_entries = len( entries )
+    l_thresh_list = [5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95]
+    #e_thresh_list = [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40]
+    e_thresh_list = [x*5 for x in range(20)]
 
     for c in range( len( clf_t ) ):
       total_pos.append(0.0)
       total_err.append(0.0)
       total_lbl.append(0.0)
-      total_acc.append(0.0)
-      total_acc2.append(0.0)
-      total_t_err.append(0.0)
+      l_thresh = []
+      e_thresh = []
+      e2_thresh = []
+      for lt in range( len( l_thresh_list ) ):
+        l_thresh.append(0.0)
+      for et in range( len( e_thresh_list ) ):
+        e_thresh.append(0.0)
+      for et in range( len( e_thresh_list ) ):
+        e2_thresh.append(0.0)
+      total_acc.append( l_thresh )
+      total_t_err.append( e_thresh )
+      total_t_err2.append( e2_thresh )
 
     # Loop through each data point
     for entry in entries:
@@ -313,34 +326,50 @@ def generate_data():
         neg = entry[3*c+6]
         lbl = str(entry[3*c+7])
         err = (score - pos*100) ** 2
-        if lbl == 'pos' and score > LABEL_THRESH:
-          acc = 1.0
-          if score > LABEL_THRESH2:
-            acc2 = 1.0
-          else:
-            acc2 = 0.0
-        elif lbl == 'neg' and score < LABEL_THRESH2:
-          acc2 = 1.0
-          if score < LABEL_THRESH2:
+        
+        for i,lt in enumerate(l_thresh_list):
+          if lbl == 'pos' and score >= lt:
+            acc = 1.0
+          elif lbl == 'neg' and score < lt:
             acc = 1.0
           else:
             acc = 0.0
-        else:
-          acc = 0.0
-          acc2 = 0.0
-
-        if err < ERR_THRESH:
-          t_err = 0.0
-        else:
-          t_err = err
+          total_acc[c][i] += acc
+        
+        for i, et in enumerate(e_thresh_list):
+          a = abs(score - pos*100)
+          if a < et:
+            t_err = 0.0
+            t_err2 = 0.0
+          else:
+            t_err = (a - et) ** 2
+            t_err2 = a ** 2
+          total_t_err[c][i] += t_err
+          total_t_err2[c][i] += t_err2
 
         total_pos[ c ] += pos
         total_err[ c ] += err
         total_lbl[ c ] += 1.0 if lbl == 'pos' else 0.0
-        total_acc[ c ] += acc
-        total_acc2[ c ] += acc2
-        total_t_err[ c ] += t_err
+    
+    
+    writer.writerow(["Varying Label Thresholds"])
+    writer.writerow(["Classifier"]+l_thresh_list)
+    for c in range( len( clf_t ) ):
+      writer.writerow( [clf_t[c]] + [ x/num_entries for x in total_acc[c] ] )
+    writer.writerow([""])
+    writer.writerow(["Varying Error Thresholds"])
+    writer.writerow(["Threshold"]+e_thresh_list)
+    for c in range( len( clf_t ) ):
+      writer.writerow( [clf_t[c]] + [ math.sqrt(x/num_entries) for x in total_t_err[c] ] )
+    writer.writerow([""])
+    writer.writerow(["Varying Error Sharp Cutoff Thresholds"])
+    writer.writerow(["Threshold"]+e_thresh_list)
+    for c in range( len( clf_t ) ):
+      writer.writerow( [clf_t[c]] + [ math.sqrt(x/num_entries) for x in total_t_err2[c] ] )
 
+    
+
+    """
     writer.writerow(["Average Score:", total_score/num_entries,
                      "Number of Reviews:", num_entries])
     writer.writerow(["Classifier", "Average Positive Sentiment", 
@@ -357,7 +386,7 @@ def generate_data():
       t_err = math.sqrt( total_t_err[ c ] / num_entries )
 
       writer.writerow([clf_t[c], pos, acc, acc2, err, t_err, lbl])
-  
+    """
   return redirect(url_for('show_movie_entries'))
 
 @app.route('/add', methods=['POST'])
