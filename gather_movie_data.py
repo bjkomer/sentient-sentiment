@@ -315,6 +315,49 @@ def compare_sources():
       for entry in entries:
         writer.writerow( [entry[0], entry[1], entry[2], entry[3]] )
     
+def hybrid_classifier():
+
+  with open('results.csv', 'wb') as csvfile:
+    writer = csv.writer( csvfile, delimiter=',')
+    
+    db = get_db()
+    
+    cur = db.execute('select score, label_dt12, label_nb12, label_dt1, '\
+                     'label_gbc12, label_dt2, label_dt3, label_nb2 from entries')
+    
+    entries = cur.fetchall()
+    num_entries = len( entries )
+    l_thresh_list = [5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95]
+    total_acc = []
+    for lt in range( len( l_thresh_list ) ):
+      total_acc.append(0.0)
+    
+    for entry in entries:
+      for i,lt in enumerate(l_thresh_list):
+        score = entry[0]
+        dt1 = entry[1]
+        dt12 = entry[3]
+        gbc12 = entry[4]
+        dt2 = entry[5]
+        dt3 = entry[6]
+        nb = entry[2]
+        nb2 = entry[7]
+        if dt1 == 'neg' and dt12 == 'neg' and gbc12 == 'neg' and dt2 == 'neg'\
+        and dt3 == 'neg' and nb2 == 'pos':
+          lbl = 'neg'
+        else:
+          lbl = nb
+        if lbl == 'pos' and score >= lt:
+          acc = 1.0
+        elif lbl == 'neg' and score < lt:
+          acc = 1.0
+        else:
+          acc = 0.0
+        total_acc[i] += acc
+    
+    writer.writerow(["Accuracy of Hybrid Classifier, Varying Label Thresholds"])
+    writer.writerow(["Classifier"]+l_thresh_list)
+    writer.writerow( ["Hybrid DT1, DT2, DT12, GBC12, NB1"] + [ x/num_entries for x in total_acc ] )
 
 
 
@@ -336,8 +379,10 @@ def generate_data():
   -Reports error for the top 10 lowest scoring movies
   """
 
-  compare_sources()
-  return redirect(url_for('show_movie_entries'))
+  #compare_sources()
+  #return redirect(url_for('show_movie_entries'))
+  #hybrid_classifier()
+  #return redirect(url_for('show_movie_entries'))
 
   with open('results.csv', 'wb') as csvfile:
     writer = csv.writer( csvfile, delimiter=',')
@@ -354,6 +399,8 @@ def generate_data():
     total_t_err = []
     total_t_err2 = []
     total_acc = []
+    total_errm = [] # error normalized by label threshhold
+    total_t_errm = [] # error normalized by label threshold, only counting incorrect labels
     total_acc2 = []
     total_score = 0.0
     num_entries = len( entries )
@@ -365,15 +412,20 @@ def generate_data():
       total_err.append(0.0)
       total_lbl.append(0.0)
       l_thresh = []
+      l2_thresh = []
+      l3_thresh = []
       e_thresh = []
       e2_thresh = []
       for lt in range( len( l_thresh_list ) ):
         l_thresh.append(0.0)
+        l2_thresh.append(0.0)
+        l3_thresh.append(0.0)
       for et in range( len( e_thresh_list ) ):
         e_thresh.append(0.0)
-      for et in range( len( e_thresh_list ) ):
         e2_thresh.append(0.0)
       total_acc.append( l_thresh )
+      total_errm.append( l2_thresh )
+      total_t_errm.append( l3_thresh )
       total_t_err.append( e_thresh )
       total_t_err2.append( e2_thresh )
 
@@ -393,10 +445,25 @@ def generate_data():
         for i,lt in enumerate(l_thresh_list):
           if lbl == 'pos' and score >= lt:
             acc = 1.0
+            t_errm = 0
           elif lbl == 'neg' and score < lt:
             acc = 1.0
+            t_errm = 0
           else:
             acc = 0.0
+            #t_errm = (score - pos * lt * 2) ** 2
+            if score >= lt:
+              t_errm = (score - (lt + (100-lt)*2*(pos-.5))) ** 2
+            else:
+              #t_errm = (score - (lt + lt*(pos))) ** 2
+              t_errm = (score - (lt*pos*2)) ** 2
+          #errm = (score - pos * lt * 2) ** 2
+          if score >= lt:
+            errm = (score - (lt + (100-lt)*2*(pos-.5))) ** 2
+          else:
+            errm = (score - (lt*pos*2)) ** 2
+          total_errm[c][i] += errm
+          total_t_errm[c][i] += t_errm
           total_acc[c][i] += acc
         
         for i, et in enumerate(e_thresh_list):
@@ -415,6 +482,14 @@ def generate_data():
         total_lbl[ c ] += 1.0 if lbl == 'pos' else 0.0
     
     
+    writer.writerow(["Varying Label Thresholds, Modified Error"])
+    writer.writerow(["Classifier"]+l_thresh_list)
+    for c in range( len( clf_t ) ):
+      writer.writerow( [clf_t[c]] + [ math.sqrt(x/num_entries) for x in total_errm[c] ] )
+    writer.writerow(["Varying Label Thresholds, Modified Error, only for incorrect labels"])
+    writer.writerow(["Classifier"]+l_thresh_list)
+    for c in range( len( clf_t ) ):
+      writer.writerow( [clf_t[c]] + [ math.sqrt(x/num_entries) for x in total_t_errm[c] ] )
     writer.writerow(["Varying Label Thresholds"])
     writer.writerow(["Classifier"]+l_thresh_list)
     for c in range( len( clf_t ) ):
